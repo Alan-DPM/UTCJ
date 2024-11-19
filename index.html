@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario API Node</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <!-- Formulario -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-6">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h2 class="card-title text-center mb-0">API con NODE</h2>
+                    </div>
+                    <div class="card-body">
+                        <form id="formulario">
+                            <div class="mb-3">
+                                <label for="noControl" class="form-label">Número de Control</label>
+                                <input type="text" class="form-control" id="noControl" placeholder="Ingrese número de control" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="nombre" class="form-label">Nombre</label>
+                                <input type="text" class="form-control" id="nombre" placeholder="Ingrese nombre completo" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="carrera" class="form-label">Materia</label>
+                                <input type="text" class="form-control" id="carrera" placeholder="Ingrese materia" required>
+                            </div>
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">Enviar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="card-title mb-0">Listado de Estudiantes</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th scope="col">No Control</th>
+                                        <th scope="col">Nombre</th>
+                                        <th scope="col">Materia</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="carrera-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript para cargar y enviar datos -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const tableBody = document.getElementById('carrera-table-body');
+            const formulario = document.getElementById("formulario");
+            let editMode = false;
+            let currentNoControl = null;
+
+            function loadStudents() {
+                fetch('/api/carrera')
+                    .then(response => response.json())
+                    .then(data => {
+                        tableBody.innerHTML = '';
+                        data.forEach(item => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${item.noControl}</td>
+                                <td>${item.name}</td>
+                                <td>${item.materia}</td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm" onclick="editStudent(${item.noControl})">Actualizar</button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteStudent(${item.noControl})">Eliminar</button>
+                                </td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    })
+                    .catch(error => console.error('Error al obtener los datos', error));
+            }
+
+            loadStudents();
+
+            window.deleteStudent = function(noControl) {
+                fetch(`/carrera/${noControl}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data.mensaje);
+                    loadStudents();
+                })
+                .catch(error => console.error('Error al eliminar el estudiante', error));
+            }
+
+            window.editStudent = function(noControl) {
+                fetch(`/carrera/${noControl}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById("noControl").value = data.noControl;
+                        document.getElementById("nombre").value = data.name;
+                        document.getElementById("carrera").value = data.materia;
+                        
+                        currentNoControl = noControl;
+                        editMode = true;
+                    })
+                    .catch(error => console.error('Error al obtener el estudiante', error));
+            }
+
+            formulario.addEventListener("submit", (event) => {
+                event.preventDefault();
+                const noControl = document.getElementById("noControl").value;
+                const name = document.getElementById("nombre").value;
+                const materia = document.getElementById("carrera").value;
+
+                if (editMode) {
+                    fetch(`/carrera/${currentNoControl}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ noControl, name, materia })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(data.mensaje);
+                        loadStudents();
+                        formulario.reset();
+                        editMode = false;
+                        currentNoControl = null;
+                    })
+                    .catch(error => console.error('Error al actualizar el estudiante', error));
+                } else {
+                    fetch('/carrera', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ noControl, name, materia })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(data.mensaje);
+                        loadStudents();
+                        formulario.reset();
+                    })
+                    .catch(error => console.error('Error al enviar los datos', error));
+                }
+            });
+        });
+    </script>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
